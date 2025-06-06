@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import axios from 'axios'
@@ -8,8 +8,26 @@ import { logout } from '../../store/authReducer'
 const Sidebar = ({ onLinkClick }) => {
     const location = useLocation();
     const navigate = useNavigate();
-    const backendUrl = useSelector(state=>state.prod.link);
+    const backendUrl = useSelector(state => state.prod.link);
+    const isAuthenticated = useSelector(state => state.auth.isAuthenticated);
     const dispatch = useDispatch();
+
+    useEffect(() => {
+        let isRedirecting = false;
+
+        if (!isAuthenticated && !isRedirecting) {
+            isRedirecting = true;
+            // toast.error('Please login to access this page', {
+            //     id: 'auth-check', // Add a unique ID to prevent duplicate toasts
+            // });
+            navigate('/');
+        }
+
+        return () => {
+            isRedirecting = false;
+        };
+    }, [isAuthenticated, navigate]);
+
     const sidebarLinks = [
         {
             name: "Dashboard",
@@ -21,15 +39,10 @@ const Sidebar = ({ onLinkClick }) => {
             to: '/profile/favorites',
             icon: "⭐"
         },
-        {
-            name: "Liked Blogs",
-            to: '/profile/likedblogs',
-            icon: "❤️"
-        },
+      
     ]
 
     const handleLinkClick = () => {
-        // Only call onLinkClick if it exists and we're on mobile
         if (onLinkClick && window.innerWidth < 768) {
             onLinkClick();
         }
@@ -39,20 +52,17 @@ const Sidebar = ({ onLinkClick }) => {
         try {
             const loadingToast = toast.loading('Logging out...');
             
-            // Call logout API which will clear the JWT cookie on the server side
             await axios.post(
                 `${backendUrl}/api/logout`,
                 {},
                 { withCredentials: true }
             );
 
-            // Dispatch logout action to clear Redux state
             dispatch(logout());
             
             toast.dismiss(loadingToast);
             toast.success('Logged out successfully');
 
-            // Redirect to login page after a short delay
             setTimeout(() => {
                 navigate('/login');
             }, 1000);
@@ -62,6 +72,11 @@ const Sidebar = ({ onLinkClick }) => {
             console.error('Logout error:', error);
         }
     };
+
+    // If not authenticated, don't render the sidebar
+    // if (!isAuthenticated) {
+    //     return null;
+    // }
 
     return (
         <div className="flex flex-col h-full bg-white shadow-lg rounded-xl p-4 transition-all duration-300 w-full">

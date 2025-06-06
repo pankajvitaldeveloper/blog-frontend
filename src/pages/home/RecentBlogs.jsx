@@ -1,67 +1,84 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import BlogCard from '../../components/BlogCard/BlogCard'
+import React, { useEffect } from "react";
+import { Link } from "react-router-dom";
+import BlogCard from "../../components/BlogCard/BlogCard";
+import { useSelector } from "react-redux";
+import { useState } from "react";
+import axios from "axios";
+import { toast, Toaster } from "react-hot-toast";
 
 const RecentBlogs = () => {
-    const blogs = [
-        {
-            id:1,
-            title:'Web Development',
-            description:'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quae, repellendus.',
-            img: 'https://media.istockphoto.com/id/1371339413/photo/co-working-team-meeting-concept-businessman-using-smart-phone-and-digital-tablet-and-laptop.jpg?s=612x612&w=0&k=20&c=ysEsVw3q2axYt3oVZAuQjtHRlN3lY-U_e0ikK5yKIXQ='
-        },
-        {
-            id:2,
-            title:'Full Stack Development',
-            description:'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quae, repellendus.',
-            img: 'https://www.clariwell.in/resources/best-web-development-course-top-training-institute-in-pune.webp'
-        },
-        {
-            id:3,
-            title:'Digital Marketing',
-            description:'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quae, repellendus.',
-            img: 'https://www.reliablesoft.net/images/digital-marketing-basics-course-example.webp'
-        },
-        {
-            id:4,
-            title:'Data Structure and Algorithms',
-            description:'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quae, repellendus.',
-            img: 'https://media.geeksforgeeks.org/wp-content/uploads/20240927124548/DSA-Self-Paced-Course.webp'
-        },
-        {
-            id:5,
-            title:'Node & React',
-            description:'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quae, repellendus.',
-            img: 'https://positiwise.com/blog/wp-content/uploads/2022/10/node-js-v-react-js-1.jpg'
-        },
-        {
-            id:6,
-            title:'Ai Course',
-            description:'Lorem ipsum dolor sit amet consectetur adipisicing elit. Quae, repellendus.',
-            img: 'https://cdn.analyticsvidhya.com/wp-content/uploads/2023/08/generative-ai-course-672ca52b9cf04.webp'
-        }
-    ]
+  const [blogs, setBlogs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const backendUrl = useSelector((state) => state.prod.link);
 
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get(`${backendUrl}/api/recent-blogs`);
+        // Check if response.data is an array, if not get the data from correct property
+        const blogsData = Array.isArray(response.data)
+          ? response.data
+          : response.data.blogs || [];
+        // // Get only the 3 most recent blogs
+        // const recentBlogs = blogsData.slice(0, 3);
+        setBlogs(blogsData);
+      } catch (error) {
+        console.error("Error fetching blogs:", error);
+        toast.error("Failed to load blogs");
+        setBlogs([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBlogs();
+  }, [backendUrl]);
+
+  if (isLoading) {
     return (
-        <section className="py-16 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-            <div className="container mx-auto px-4">
-                <div className="flex justify-between items-center mb-12">
-                    <h2 className="text-3xl font-bold text-white">Recent Blogs</h2>
-                    <Link to="/all-blogs" className="bg-black p-2 hover:text-blue-300 transition-colors duration-300">
-                        View All →
-                    </Link>
-                </div>
+      <section className="py-16 gradient-primary ">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-white border-t-transparent"></div>
+            <span className="ml-3">Loading blogs...</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {blogs.map((blog, index) => (
-                     <div key={index}>
-                        <BlogCard blog={blog} />
-                     </div>
-                    ))}
-                </div>
+  return (
+    <section className="py-16 gradient-primary">
+      <div className="container mx-auto px-4">
+        <div className="flex justify-between items-center mb-12">
+          <h2 className="text-3xl font-bold ">Recent Blogs</h2>
+          <Link
+            to="/all-blogs"
+            className="bg-white/10 backdrop-blur-sm px-6 py-2 rounded-full 
+                     hover:bg-white/20 transition-all duration-300 
+                     border border-white/20"
+          >
+            View All →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {Array.isArray(blogs) && blogs.length > 0 ? (
+            blogs.map((blog, index) => (
+              <div key={blog._id || index} className="transform hover:-translate-y-1 transition-transform duration-300">
+                <BlogCard blog={blog} />
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center bg-white/10 backdrop-blur-sm rounded-lg p-8 border border-white/20">
+              <p className="text-xl ">No blogs found</p>
             </div>
-        </section>
-    )
-}
+          )}
+        </div>
+      </div>
+    </section>
+  );
+};
 
-export default RecentBlogs
+export default RecentBlogs;

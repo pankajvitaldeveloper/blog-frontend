@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+/* Custom gradient classes */
+.gradient-primary {
+  @apply bg-gradient-to-br from-purple-100 via-purple-200 to-blue-100;
+}
+
+.gradient-button {
+  @apply bg-gradient-to-br from-purple-300 via-purple-400 to-blue-300 text-white font-bold py-2 px-4 rounded;
+}

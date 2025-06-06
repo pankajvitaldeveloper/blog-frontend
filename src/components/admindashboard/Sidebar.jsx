@@ -1,11 +1,79 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import axios from 'axios';
 import { HiMenuAlt2, HiX } from 'react-icons/hi';
-import { FaHome, FaPlus, FaEdit } from 'react-icons/fa';
+import { FaHome, FaPlus, FaEdit, FaSignOutAlt } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
+import { logout } from '../../store/authReducer';
 
 const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const location = useLocation();
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const backendUrl = useSelector(state => state.prod.link);
+
+    useEffect(() => {
+        const validateAdmin = async () => {
+            try {
+                const response = await axios.get(`${backendUrl}/api/check-cookie`, {
+                    withCredentials: true,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.data.success) {
+                    toast.error('Admin access required', {
+                        id: 'admin-auth'
+                    });
+                    navigate('/');
+                }
+            } catch (error) {
+                toast.error('Please login as admin', {
+                    id: 'admin-auth'
+                });
+                navigate('/');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        validateAdmin();
+    }, [backendUrl, navigate]);
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-screen">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+        </div>;
+    }
+
+    const handleLogout = async () => {
+        try {
+            const loadingToast = toast.loading('Logging out...');
+            
+            await axios.post(
+                `${backendUrl}/api/logout`,
+                {},
+                { withCredentials: true }
+            );
+
+            dispatch(logout());
+            
+            toast.dismiss(loadingToast);
+            toast.success('Logged out successfully');
+
+            setTimeout(() => {
+                navigate('/admin-login');
+            }, 1000);
+
+        } catch (error) {
+            toast.error('Failed to logout. Please try again.');
+            console.error('Logout error:', error);
+        }
+    };
 
     const links = [
         {
@@ -29,8 +97,8 @@ const Sidebar = () => {
         {
             id: 4,
             name: "Logout",
-            to: "/admin-dashboard/logout",
-            icon: <FaEdit className="w-5 h-5" />
+            onClick: handleLogout,
+            icon: <FaSignOutAlt className="w-5 h-5" />
         },
     ];
 
@@ -57,18 +125,33 @@ const Sidebar = () => {
                     
                     <nav className="space-y-4">
                         {links.map((link) => (
-                            <Link
-                                key={link.id}
-                                to={link.to}
-                                onClick={() => window.innerWidth < 768 && toggleSidebar()}
-                                className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200
-                                    ${location.pathname === link.to 
-                                        ? 'bg-white/10 text-white' 
-                                        : 'hover:bg-white/5'}`}
-                            >
-                                {link.icon}
-                                <span className="font-medium">{link.name}</span>
-                            </Link>
+                            link.onClick ? (
+                                <button
+                                    key={link.id}
+                                    onClick={() => {
+                                        link.onClick();
+                                        if (window.innerWidth < 768) toggleSidebar();
+                                    }}
+                                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200
+                                        hover:bg-white/5`}
+                                >
+                                    {link.icon}
+                                    <span className="font-medium">{link.name}</span>
+                                </button>
+                            ) : (
+                                <Link
+                                    key={link.id}
+                                    to={link.to}
+                                    onClick={() => window.innerWidth < 768 && toggleSidebar()}
+                                    className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200
+                                        ${location.pathname === link.to 
+                                            ? 'bg-white/10 text-white' 
+                                            : 'hover:bg-white/5'}`}
+                                >
+                                    {link.icon}
+                                    <span className="font-medium">{link.name}</span>
+                                </Link>
+                            )
                         ))}
                     </nav>
                 </div>

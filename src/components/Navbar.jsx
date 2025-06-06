@@ -23,19 +23,24 @@ const Navbar = () => {
     {
       name: "All Blogs",
       to: '/all-blogs',
-    }
+    },
+    {
+      name: "Contact",
+      to: '/contact',
+    },
     
   ]
 
   //below of redux auth implementation
   if(!isLoggeIn){
     links.splice(2,1)
-  }else{
-    links.splice(2,0,{
-      name: "My Blogs",
-      to: '/my-blogs',
-    })
   }
+  // else{
+  //   links.splice(2,0,{
+  //     name: "My Blogs",
+  //     to: '/my-blogs',
+  //   })
+  // }
 
 
   return (

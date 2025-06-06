@@ -5,7 +5,6 @@ import Page from './pages/home/Page'
 import Login from './pages/admin/Login'
 import Register from './pages/admin/Register'
 import OtherLayout from './layout/OtherLayout'
-import About from './pages/About'
 import AllPage from './pages/allblogs/Page'
 import Home from './pages/profile/Home'
 import Dashboard from './components/profile/Dashboard'
@@ -24,6 +23,9 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import axios from 'axios'
 import { login } from'./store/authReducer'
+import ScrollTopPage from './components/ScrollTopPage'
+import About from './pages/about/About'
+import Contact from './pages/contact/Contact'
 
 const App = () => {
 const backendUrl = useSelector(state=>state.prod.link);
@@ -55,13 +57,17 @@ const dispatch = useDispatch();
   return (
     <>
       <Router>
+        <ScrollTopPage />
         <Routes>
           <Route path='/' element={<Mainlayout/>}>
             <Route index element={<Page />} />
             <Route path='/about' element={<About />} />
+            <Route path='/contact' element={<Contact />} />
             <Route path='/all-blogs' element={<AllPage />} />
             <Route path='/description/:id' element={<Description />} />
-            <Route path='/categories/:id' element={<Categories />} />
+
+            {/* <Route path="/categories" element={<Categories />} /> */}
+            <Route path='/categories/:categoryId' element={<Categories />} />
 
             <Route path='/profile' element={<Home />}>   
             {/* below code of profile index link with outlet */}
@@ -83,7 +89,6 @@ const dispatch = useDispatch();
               <Route path='/admin-dashboard/edit-blogs/:id' element={<UpdateBlog />} />
 
             </Route>
-
           </Route>
         </Routes>
       </Router>

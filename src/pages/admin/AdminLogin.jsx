@@ -58,7 +58,7 @@ const AdminLogin = () => {
         });
         // Navigate to admin dashboard after successful login
         // navigate('/admin/dashboard');
-        navigate('/profile'); // Adjust the path as needed
+        navigate('/admin-dashboard'); // Adjust the path as needed
         // console.log(res.data);
       }
     } catch (error) {

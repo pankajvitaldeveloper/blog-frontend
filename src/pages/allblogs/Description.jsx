@@ -1,75 +1,188 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
+import axios from 'axios';
+import { useSelector } from 'react-redux';
+import { toast, Toaster } from 'react-hot-toast';
+import { FaHeart, FaRegHeart } from 'react-icons/fa'; // Import heart icons
 
 const Description = () => {
+  const {id} = useParams();
+  const [blogData, setBlogData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const backendUrl = useSelector((state) => state.prod.link);
+
+  // Fetch blog data with authentication
+  useEffect(() => {
+    const fetchBlogData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // First fetch blog data without authentication
+        const blogResponse = await axios.get(`${backendUrl}/api/blog/${id}`);
+        
+        if (blogResponse.data.success) {
+          const { blog } = blogResponse.data;
+          setBlogData(blog);
+          setLikesCount(blog.likeBlogs?.length || 0);
+          
+          // Then try to get user data to check like status
+          try {
+            const userResponse = await axios.get(`${backendUrl}/api/getprofiledata`, { 
+              withCredentials: true 
+            });
+            
+            if (userResponse.data.success) {
+              const userId = userResponse.data.user._id;
+              
+              // Check if user has liked this blog
+              const hasLiked = blog.likeBlogs?.some(
+                likedUserId => likedUserId.toString() === userId.toString()
+              );
+              
+              setIsLiked(hasLiked);
+            }
+          } catch (userError) {
+            // If user is not logged in, just continue without like status
+            console.log('User not logged in');
+            setIsLiked(false);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching blog:', error);
+        toast.error('Failed to load blog');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBlogData();
+}, [id, backendUrl]);
+
+  const handleLike = async () => {
+    try {
+      const endpoint = `${backendUrl}/api/blog/${isLiked ? 'remove' : 'add'}-favorite/${id}`;
+      
+      const response = await axios.post(endpoint, {}, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        setIsLiked(!isLiked);
+        setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
+        toast.success(response.data.message);
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        toast.error('Please login to like blogs');
+      } else {
+        toast.error('Failed to update like');
+      }
+    }
+  };
+  
+  const renderLikeButton = () => (
+    <div className="flex items-center gap-2">
+      <button 
+        onClick={handleLike}
+        className="transform transition-transform hover:scale-110"
+        title={!blogData ? '' : 'Login to like this blog'}
+      >
+        {isLiked ? (
+          <FaHeart className="w-6 h-6 text-red-500" />
+        ) : (
+          <FaRegHeart className="w-6 h-6 text-white" />
+        )}
+      </button>
+      <span className="text-white text-sm">
+        {likesCount} {likesCount === 1 ? 'like' : 'likes'}
+      </span>
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen gradient-primary py-8 flex items-center justify-center">
+        <div className="text-2xl text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!blogData) {
+    return (
+      <div className="min-h-screen gradient-primary py-12 flex items-center justify-center">
+        <div className="text-2xl text-white">Blog not found</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen gradient-primary py-12">
+      <Toaster position="top-center" reverseOrder={false} />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300">
           {/* Image Section */}
           <div className="w-full h-[400px] relative">
             <img 
-              src="https://media.istockphoto.com/id/1371339413/photo/co-working-team-meeting-concept-businessman-using-smart-phone-and-digital-tablet-and-laptop.jpg?s=612x612&w=0&k=20&c=ysEsVw3q2axYt3oVZAuQjtHRlN3lY-U_e0ikK5yKIXQ="
-              alt="Blog Image"
+              src={blogData?.image}
+              alt={blogData?.title}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-            <h1 className="absolute bottom-6 left-6 text-3xl font-bold text-white">
-              Web Development
-            </h1>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+            <div className="absolute bottom-6 left-6 right-6">
+              <h1 className="text-4xl font-bold text-white mb-4">
+                {blogData?.title}
+              </h1>
+              <div className="flex items-center gap-4 text-white/80">
+                <span>
+                  {new Date(blogData?.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </span>
+                <span>•</span>
+                {renderLikeButton()}
+              </div>
+            </div>
           </div>
           
           {/* Content Section */}
-          <div className="p-8">
-            <div className="flex items-center gap-4 mb-6 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span>Posted 2 days ago</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                <span>5 min read</span>
-              </div>
-            </div>
-            
+          <div className="p-8 md:p-12">
             <div className="prose prose-lg max-w-none">
-              <p className="text-gray-600">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam euismod, nisl eget ultricies
-                fringilla, nunc nisl ultricies nunc, nec ultricies nisl nisl nec nisl. Sed do eiusmod tempor 
-                incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                ullamco laboris nisi ut aliquip ex ea commodo consequat.
+              <p className="text-gray-700 text-lg leading-relaxed">
+                {blogData?.description}
               </p>
             </div>
             
-            <div className="mt-8 flex items-center justify-between">
-              <button className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
-                Read More
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-              
-              <div className="flex items-center gap-4">
-                <button className="text-gray-500 hover:text-blue-600 transition-colors duration-200">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                </button>
-                <button className="text-gray-500 hover:text-blue-600 transition-colors duration-200">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                </button>
+            <div className="mt-8 border-t pt-8">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 text-gray-600">
+                  <span className="text-sm">Share this article:</span>
+                  {/* Add your social share buttons here */}
+                  <button className="hover:text-blue-600 transition-colors">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.44 9.5 5.32v2.15h-3v4h3v12h5v-12h3.85l.42-4z"/>
+                    </svg>
+                  </button>
+                  <button className="hover:text-blue-400 transition-colors">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Description
+export default Description;
